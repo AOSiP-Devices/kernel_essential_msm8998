@@ -35,10 +35,6 @@
 #include <soc/qcom/watchdog.h>
 #include <soc/qcom/minidump.h>
 
-#ifdef CONFIG_ESSENTIAL_APR
-#include <essential/essential_reason.h>
-#endif
-
 #define EMERGENCY_DLOAD_MAGIC1    0x322A4F99
 #define EMERGENCY_DLOAD_MAGIC2    0xC67E4350
 #define EMERGENCY_DLOAD_MAGIC3    0x77777777
@@ -161,6 +157,7 @@ static bool get_dload_mode(void)
 	return dload_mode_enabled;
 }
 
+#if 0
 static void enable_emergency_dload_mode(void)
 {
 	int ret;
@@ -185,6 +182,7 @@ static void enable_emergency_dload_mode(void)
 	if (ret)
 		pr_err("Failed to set secure EDLOAD mode: %d\n", ret);
 }
+#endif
 
 static int dload_set(const char *val, struct kernel_param *kp)
 {
@@ -339,50 +337,14 @@ static void msm_restart_prepare(const char *cmd)
 			if (!ret)
 				__raw_writel(0x6f656d00 | (code & 0xff),
 					     restart_reason);
+#if 0
 		} else if (!strncmp(cmd, "edl", 3)) {
 			enable_emergency_dload_mode();
+#endif
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
 	}
-
-#ifdef CONFIG_ESSENTIAL_APR
-	if (cmd != NULL) {
-		if (!strncmp(cmd, "panic", 5)) {
-			need_warm_reset = true;
-			qpnp_pon_set_restart_reason(REASON_KERNEL_PANIC);
-			__raw_writel(0x520A450A, restart_reason);
-		} else if (strstr(cmd, "modem crashed")) {
-			need_warm_reset = true;
-			qpnp_pon_set_restart_reason(REASON_MODEM_FATAL);
-			__raw_writel(0x520B450B, restart_reason);
-		} else if (strstr(cmd, "exception in system process") ||
-			strstr(cmd, "Watchdog reboot system") ||
-			strstr(cmd, "system crash")) {
-			need_warm_reset = true;
-			qpnp_pon_set_restart_reason(REASON_SYSTEM_CRASH);
-			__raw_writel(0x520C450C, restart_reason);
-		} else if (!strncmp(cmd, "unknown", 7)) {
-			need_warm_reset = true;
-			qpnp_pon_set_restart_reason(REASON_UNKNOWN_RESET);
-			__raw_writel(0x520D450D, restart_reason);
-		} else {
-			qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
-		}
-	}
-
-	if (in_panic) {
-		need_warm_reset = true;
-		qpnp_pon_set_restart_reason(REASON_KERNEL_PANIC);
-		__raw_writel(0x520A450A, restart_reason);
-	}
-
-	if (need_warm_reset) {
-		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
-	} else {
-		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
-	}
-#endif
 
 	flush_cache_all();
 
